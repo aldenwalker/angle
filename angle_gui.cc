@@ -500,6 +500,15 @@ void AngleGui::S_lam_limit_leaves_depth(void* e) {
   draw_lam();
 }
 
+void AngleGui::S_lam_highlight(void* e) {
+  XEvent* ee = (XEvent*)e;
+  if (ee->type != ButtonPress) return;
+  lam_highlight = !lam_highlight;
+  W_lam_highlight.checked = lam_highlight;
+  W_lam_highlight.redraw();
+  draw_lam();
+}
+
 
 /****************************************************************************
  * translating points
@@ -663,7 +672,7 @@ void AngleGui::draw_lam() {
   while (leaf_stack.size() > 0) {
     Leaf ell = leaf_stack.back();
     leaf_stack.pop_back();
-    if ((int)ell.word.size() == lam_depth && angle_diff(ell.x, ell.y) > epsilon) {
+    if ((int)ell.word.size() == lam_depth && angle_diff(ell.x, ell.y) > epsilon && lam_highlight) {
       //std::cout << "Good leaf: " << ell << "\n";
       XSetForeground(display, LP.gc, rcol);
       XSetLineAttributes(display, LP.gc, 2, LineSolid, CapButt, JoinMiter);
@@ -1044,6 +1053,7 @@ void AngleGui::pack_window() {
   W_lam_depth = WidgetIntSelector(this, -1, "Depth:", lam_depth, &AngleGui::S_lam_depth);
   W_lam_backward_depth = WidgetIntSelector(this, -1, "Backwards:", lam_backward_depth, &AngleGui::S_lam_backward_depth);
   W_lam_limit_leaves_depth = WidgetIntSelector(this, -1, "Limit leaves:", lam_limit_leaves_depth, &AngleGui::S_lam_limit_leaves_depth);
+  W_lam_highlight = WidgetCheck(this, -1, "Highlight viable", lam_highlight, &AngleGui::S_lam_highlight);
   W_lam_lambda_label = WidgetText(this, 300, "Lambda: (initializing)");
   W_lam_theta_label = WidgetText(this, 300, "Theta: (initializing)");
   W_lam_lam_type = WidgetText(this, 300, "Lamination type: (initializing)");
@@ -1080,6 +1090,7 @@ void AngleGui::pack_window() {
   pack_widget_upper_right(&W_lam_plot, &W_lam_depth);
   pack_widget_upper_right(&W_lam_plot, &W_lam_backward_depth);
   pack_widget_upper_right(&W_lam_plot, &W_lam_limit_leaves_depth);
+  pack_widget_upper_right(&W_lam_plot, &W_lam_highlight);
   pack_widget_upper_right(&W_param_words, &W_lam_lambda_label);
   pack_widget_upper_right(&W_param_words, &W_lam_theta_label);
   pack_widget_upper_right(&W_param_words, &W_lam_lam_type);
@@ -1152,6 +1163,7 @@ void AngleGui::launch() {
   lam_depth = 10;
   lam_backward_depth = 0;
   lam_limit_leaves_depth = 0;
+  lam_highlight = true;
   lam_lambda = 1.5;
   lam_theta = 0;
   

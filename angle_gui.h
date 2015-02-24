@@ -130,6 +130,7 @@ struct AngleGui {
   WidgetIntSelector W_lam_depth;
   WidgetIntSelector W_lam_backward_depth;
   WidgetIntSelector W_lam_limit_leaves_depth;
+  WidgetCheck W_lam_highlight;
   
   void S_param_recenter(void* e);
   void S_param_zoom_in(void* e);
@@ -144,6 +145,7 @@ struct AngleGui {
   void S_lam_depth(void* e);
   void S_lam_backward_depth(void* e);
   void S_lam_limit_leaves_depth(void* e);
+  void S_lam_highlight(void* e);
   void S_lam_draw(void* e);
   
   void draw_param();
@@ -191,6 +193,7 @@ struct AngleGui {
   double lam_lambda;
   double lam_theta;
   int lam_pixel_size;
+  bool lam_highlight;
   
   void detach_widget(Widget* w);
   void pack_widget_upper_right(const Widget* w1, Widget* w2);
