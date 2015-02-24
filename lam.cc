@@ -860,7 +860,9 @@ void Lamination::find_limit_leaves(std::vector<ThickLeaf>& initials,
                                    std::vector<ThickLeaf>& images, 
                                    Graph& inclusion_graph,
                                    bool& complete,
-                                   int depth, int verbose) {
+                                   int depth, 
+                                   bool expand_graph,
+                                   int verbose) {
   std::vector<ThickLeaf> current_initials(0);
   std::vector<ThickLeaf> current_images(0);
   std::vector<bool> marked_for_action(0);
@@ -1044,7 +1046,7 @@ void Lamination::find_limit_leaves(std::vector<ThickLeaf>& initials,
     inclusion_weights[i] = current_images[i].word.size();
   }
   
-  if (current_images.size() > 10) {
+  if (current_images.size() > 10 || !expand_graph) {
     inclusion_graph = Graph::from_edges(compact_inclusions);
   } else {
     inclusion_graph = Graph::from_edges_with_weights(compact_inclusions, inclusion_weights);

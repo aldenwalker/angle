@@ -614,7 +614,7 @@ void AngleGui::draw_lam() {
     std::vector<ThickLeaf> initials, images;
     Graph inclusion_graph;
     bool complete;
-    L.find_limit_leaves(initials, images, inclusion_graph, complete, lam_limit_leaves_depth, 0);
+    L.find_limit_leaves(initials, images, inclusion_graph, complete, lam_limit_leaves_depth, false, 0);
     //std::sort(images.begin(), images.end());
     //std::reverse(images.begin(), images.end());
     for (int i=0; i<(int)images.size(); ++i) {
@@ -748,7 +748,7 @@ void AngleGui::recompute_lam_data() {
     std::vector<ThickLeaf> initials, images;
     Graph inclusion_graph;
     bool complete;
-    L.find_limit_leaves(initials, images, inclusion_graph, complete, lam_limit_leaves_depth, 1);
+    L.find_limit_leaves(initials, images, inclusion_graph, complete, lam_limit_leaves_depth, false, 1);
     std::cout << "Leading eigenvalue: " << inclusion_graph.approximate_leading_eigenvalue(inclusion_graph.num_verts) << "\n";
     std::cout << inclusion_graph.mathematica_string() << "\n";
   }

@@ -127,7 +127,9 @@ struct Lamination {
                          std::vector<ThickLeaf>& images, 
                          Graph& inclusion_graph,
                          bool& complete,
-                         int depth, int verbose=0);
+                         int depth, 
+                         bool expand_graph, 
+                         int verbose=0);
   
 };
 
