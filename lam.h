@@ -130,6 +130,8 @@ struct Lamination {
                          int depth, 
                          bool expand_graph, 
                          int verbose=0);
+  std::vector<bool> trajectory(double x, int depth, double epsilon, double scale);
+  bool endpoints_map_near_endpoints(int depth, double epsilon, double scale, int verbose=0);
   
 };
 

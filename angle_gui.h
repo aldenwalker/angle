@@ -120,6 +120,8 @@ struct AngleGui {
   WidgetCheck W_param_words;
   WidgetCheck W_param_inclusion;
   WidgetCheck W_param_plot_points;
+  WidgetCheck W_param_endpoints;
+  WidgetIntSelector W_param_endpoints_depth;
   WidgetText W_param_mouse_lambda;
   WidgetText W_param_mouse_theta;
   
@@ -127,6 +129,7 @@ struct AngleGui {
   WidgetText W_lam_lambda_label;
   WidgetText W_lam_theta_label;
   WidgetText W_lam_lam_type;
+  WidgetText W_lam_trajectories;
   WidgetIntSelector W_lam_depth;
   WidgetIntSelector W_lam_backward_depth;
   WidgetIntSelector W_lam_limit_leaves_depth;
@@ -139,6 +142,8 @@ struct AngleGui {
   void S_param_mesh(void* e);
   void S_param_words(void* e);
   void S_param_inclusion(void* e);
+  void S_param_endpoints(void* e);
+  void S_param_endpoints_depth(void* e);
   void S_param_plot_points(void* e);
   void S_param_draw(void* e);
   
@@ -153,7 +158,7 @@ struct AngleGui {
   void recompute_lam_data();
   void reset_param_grid();
   void reset_param_window();
-  int compute_color_from_grid(const Point3d<int>& p);
+  int compute_color_from_grid(const Point4d<int>& p);
   void reset_highlighted_point(double L, double T);
   void draw_highlighted_point();
   void draw_param_point(double L, double T, int col);
@@ -172,9 +177,11 @@ struct AngleGui {
   double param_pixel_group_theta_size;
   double param_pixel_lambda_size;
   double param_pixel_theta_size;
-  std::vector<std::vector<Point3d<int> > > param_grid;
+  std::vector<std::vector<Point4d<int> > > param_grid;
   bool param_words;
   bool param_inclusion;
+  bool param_endpoints;
+  int param_endpoints_depth;
   bool param_plot_points;
   
   void param_LT_to_pixel_group(double lambda, double theta, int& x, int& y);

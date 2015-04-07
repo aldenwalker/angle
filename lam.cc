@@ -33,6 +33,7 @@ double angle_diff(double a, double b) {
  
 //return the distance from a to b
 double angle_dist(double a, double b) {
+  if (a==b) return 0;
   if (a < b) {
     return b-a;
   } else {
@@ -1066,9 +1067,83 @@ void Lamination::find_limit_leaves(std::vector<ThickLeaf>& initials,
   images = current_images;
   complete = !went_past_depth;
 }
+
+
+
+
+
+/*****************************************************************************
+ * compute the trajectory of a point; epsilon determines the distance 
+ * within which it gives up and says the trajectory is finite
+ * if scale>0, then it will scale epsilon at each iteration (to make it bigger)
+ * ***************************************************************************/
+std::vector<bool> Lamination::trajectory(double x, int depth, double epsilon, double scale) {
+  std::vector<bool> ans(0);
+  double e1 = PI/2.0;
+  double e2 = 3.0*PI/2.0;
+  PartiallyDefinedMap fI = f.inverse();
+  PartiallyDefinedMap gI = g.inverse();
+  //std::cout << "Acting on " << x << "\n";
+  for (int i=0; i<depth; ++i) {
+    //check if x is close to an endpoint
+    if ( angle_dist(x, e1) < epsilon || angle_dist(x, e2) < epsilon ) {
+      return ans;
+    }
+    //get the side of x
+    if (weak_cyclically_ordered(e1, x, e2)) {
+      ans.push_back(0);
+      x = fI.act_on_point(x);
+    } else {
+      ans.push_back(1);
+      x = gI.act_on_point(x);
+    }
+    
+    //std::cout << "New x: " << x << "\n";
+    
+    //if we're supposed to scale epsilon, do it
+    if (scale > 0) {
+      epsilon *= scale;
+    }
+  }
+  return ans;
+}
+
+std::ostream& operator<<(std::ostream& os, const std::vector<bool>& v) {
+  for (int i=0; i<(int)v.size(); ++i) {
+    os << v[i];
+  }
+  return os;
+}
+
+/*****************************************************************************
+ * determine whether either endpoint of ell maps near the endpoints of ell 
+ * (at any depth) under the inverse map (i.e. has finite trajectory)
+ * to check this, we take the top of ell (pi/2) and map it first under g, 
+ * then f, and get those trajectories
+ * **************************************************************************/
+bool Lamination::endpoints_map_near_endpoints(int depth, double epsilon, double scale, int verbose) {
+  if (verbose>0) {
+    std::cout << "Checking for endpoints with depth " << depth << " epsilon " << epsilon << " and scale " << scale << "\n";
+  }
+  PartiallyDefinedMap fI = f.inverse();
+  PartiallyDefinedMap gI = g.inverse();
   
+  double gx = gI.act_on_point(PI/2.0);
+  std::vector<bool> T1 = trajectory(gx, depth+1, epsilon, scale);
+  if (verbose>0) std::cout << "Found G(pi/2) trajectory: " << T1 << "\n";
+  if ((int)T1.size() < depth+1) return true;
+  
+  double fx = fI.act_on_point(PI/2.0);
+  std::vector<bool> T2 = trajectory(fx, depth+1, epsilon, scale);
+  if (verbose>0) std::cout << "Found F(pi/2) trajectory: " << T2 << "\n";
+  if ((int)T2.size() < depth+1) return true;
+  
+  return false;
+}
 
-
+/***************************************************************************
+ * get the trajectories of G(pi/2) and F(pi/2)
+ * *************************************************************************/
 
 
 

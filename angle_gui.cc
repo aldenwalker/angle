@@ -440,6 +440,29 @@ void AngleGui::S_param_inclusion(void* e) {
   draw_lam();
 }
 
+void AngleGui::S_param_endpoints(void* e) {
+  XEvent* ee = (XEvent*)e;
+  if (ee->type != ButtonPress) return;
+  param_endpoints = !param_endpoints;
+  W_param_endpoints.checked = param_endpoints;
+  W_param_endpoints.redraw();
+  draw_param();
+  draw_lam();
+}
+
+
+void AngleGui::S_param_endpoints_depth(void* e) {
+  WidgetIntSelectorEvent* ee = (WidgetIntSelectorEvent*)e;
+  if (ee->type == WidgetIntSelectorEvent::DOWN) {
+    if (param_endpoints_depth == 0) return;
+    param_endpoints_depth -= 1;
+  } else {
+    param_endpoints_depth += 1;
+  }
+  W_param_endpoints_depth.update_value(param_endpoints_depth);
+  draw_param();
+}
+
 
 void AngleGui::S_param_plot_points(void* e) {
   XEvent* ee = (XEvent*)e;
@@ -753,11 +776,21 @@ void AngleGui::recompute_lam_data() {
     std::cout << inclusion_graph.mathematica_string() << "\n";
   }
   
+  
+  //double pg_size = (param_pixel_group_lambda_size > param_pixel_group_theta_size ? param_pixel_group_lambda_size : param_pixel_group_theta_size);
+  //double epsilon = 2*pg_size;
+  //double scale = lam_lambda;
+  //if (L.endpoints_map_near_endpoints(lam_depth, epsilon, scale, 0) ? 1 : 0) {
+  //  std::cout << "Endpoints: yes\n";
+  //} else {
+  //  std::cout << "Endpoints: no\n";
+  //}
+  
 }
 
 
 void AngleGui::reset_param_grid() {
-  param_grid = std::vector<std::vector<Point3d<int> > >(param_num_pixel_groups_width);
+  param_grid = std::vector<std::vector<Point4d<int> > >(param_num_pixel_groups_width);
   for (int i=0; i<(int)param_num_pixel_groups_width; ++i) {
     param_grid[i].resize(param_num_pixel_groups_height);
   }
@@ -784,8 +817,14 @@ leaves larger than epsilon at depth, depending on param_words
 
 p.z: maximal rank of free semigroup in inclusion graph (negative if incomplete)
 
+p.w: one of the endpoints of an interval maps near an endpoint (1=yes, 0=no or off)
+
 */
-int AngleGui::compute_color_from_grid(const Point3d<int>& p) {
+int AngleGui::compute_color_from_grid(const Point4d<int>& p) {
+  
+  if (p.w == 1) 
+    return get_rgb_color(0,0,0);
+  
   if (p.x == 0) 
     return get_rgb_color(1,1,1);
   
@@ -846,6 +885,16 @@ void AngleGui::draw_param() {
         } else {     
           param_grid[i][j].z = 0;
         }
+        if (param_endpoints) {
+          //we need to know what epsilon is -- what is the size of a pixel?
+          //get the larger dimension
+          double pg_size = (param_pixel_group_lambda_size > param_pixel_group_theta_size ? param_pixel_group_lambda_size : param_pixel_group_theta_size);
+          double epsilon = 2*pg_size;
+          double scale = 1.1*lambda;
+          param_grid[i][j].w = (L.endpoints_map_near_endpoints(param_endpoints_depth, epsilon, scale) ? 1 : 0);
+        } else {
+          param_grid[i][j].w = 0;
+        }
       }
       
       int col = compute_color_from_grid(param_grid[i][j]);
@@ -885,10 +934,10 @@ void AngleGui::reset_highlighted_point(double L, double T) {
   //paint over the currently highlighted point
   int ig, jg;
   param_LT_to_pixel_group(lam_lambda, lam_theta, ig, jg);
-  int istart = (ig-3 < 0 ? 0 : ig-3);
-  int iend = (ig+3 > param_num_pixel_groups_width-1 ? param_num_pixel_groups_width-1 : ig+2);
-  int jstart = (jg-3 < 0 ? 0 : jg-3);
-  int jend = (jg+3 > param_num_pixel_groups_height-1 ? param_num_pixel_groups_height-1 : jg+2);
+  int istart = (ig-5 < 0 ? 0 : ig-5);
+  int iend = (ig+5 > param_num_pixel_groups_width-1 ? param_num_pixel_groups_width-1 : ig+5);
+  int jstart = (jg-5 < 0 ? 0 : jg-5);
+  int jend = (jg+5 > param_num_pixel_groups_height-1 ? param_num_pixel_groups_height-1 : jg+5);
   Widget& PP = W_param_plot;
   for (int i=istart; i<iend; ++i) {
     for (int j=jstart; j<jend; ++j) {
@@ -1044,7 +1093,9 @@ void AngleGui::pack_window() {
   W_param_depth = WidgetIntSelector(this, -1, "Depth:", 10, &AngleGui::S_param_depth);
   W_param_mesh = WidgetIntSelector(this, -1, "Mesh:", 4, &AngleGui::S_param_mesh);
   W_param_words = WidgetCheck(this, -1, "Num words colors", param_words, &AngleGui::S_param_words);
-  W_param_inclusion = WidgetCheck(this, -1, "Inclusion colors", param_words, &AngleGui::S_param_inclusion);
+  W_param_inclusion = WidgetCheck(this, -1, "Inclusion colors", param_inclusion, &AngleGui::S_param_inclusion);
+  W_param_endpoints = WidgetCheck(this, -1, "Endpoints", param_endpoints, &AngleGui::S_param_endpoints);
+  W_param_endpoints_depth = WidgetIntSelector(this, -1, "Depth:", param_endpoints_depth, &AngleGui::S_param_endpoints_depth);
   W_param_plot_points = WidgetCheck(this, -1, "Plot points", param_plot_points, &AngleGui::S_param_plot_points);
   W_param_mouse_lambda = WidgetText(this, 300, "Mouse lambda: (initializing)");
   W_param_mouse_theta = WidgetText(this, 300, "Mouse theta: (initializing)");
@@ -1057,6 +1108,7 @@ void AngleGui::pack_window() {
   W_lam_lambda_label = WidgetText(this, 300, "Lambda: (initializing)");
   W_lam_theta_label = WidgetText(this, 300, "Theta: (initializing)");
   W_lam_lam_type = WidgetText(this, 300, "Lamination type: (initializing)");
+  W_lam_trajectories = WidgetText(this, 300, "Trajectories: (initializing)");
   
   //record the sizes
   param_pixel_width = W_param_plot.width;
@@ -1084,6 +1136,8 @@ void AngleGui::pack_window() {
   pack_widget_upper_right(&W_param_plot, &W_param_mesh);
   pack_widget_upper_right(&W_param_plot, &W_param_words);
   pack_widget_upper_right(&W_param_plot, &W_param_inclusion);
+  pack_widget_upper_right(&W_param_plot, &W_param_endpoints);
+  pack_widget_upper_right(&W_param_plot, &W_param_endpoints_depth);
   pack_widget_upper_right(&W_param_plot, &W_param_plot_points);
   
   pack_widget_upper_right(&W_param_zoom_out, &W_lam_plot);
@@ -1094,6 +1148,7 @@ void AngleGui::pack_window() {
   pack_widget_upper_right(&W_param_words, &W_lam_lambda_label);
   pack_widget_upper_right(&W_param_words, &W_lam_theta_label);
   pack_widget_upper_right(&W_param_words, &W_lam_lam_type);
+  pack_widget_upper_right(&W_param_words, &W_lam_trajectories);
   
   
   //draw all the widgets
@@ -1158,6 +1213,8 @@ void AngleGui::launch() {
   param_depth = 10;
   param_words = false;
   param_inclusion = false;
+  param_endpoints = false;
+  param_endpoints_depth = 4;
   param_plot_points = false;
   
   lam_depth = 10;
