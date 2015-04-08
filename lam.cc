@@ -1077,7 +1077,7 @@ void Lamination::find_limit_leaves(std::vector<ThickLeaf>& initials,
  * within which it gives up and says the trajectory is finite
  * if scale>0, then it will scale epsilon at each iteration (to make it bigger)
  * ***************************************************************************/
-std::vector<bool> Lamination::trajectory(double x, int depth, double epsilon, double scale) {
+std::vector<bool> Lamination::trajectory(double x, int depth, double epsilon, double scale, bool only_top) {
   std::vector<bool> ans(0);
   double e1 = PI/2.0;
   double e2 = 3.0*PI/2.0;
@@ -1086,7 +1086,7 @@ std::vector<bool> Lamination::trajectory(double x, int depth, double epsilon, do
   //std::cout << "Acting on " << x << "\n";
   for (int i=0; i<depth; ++i) {
     //check if x is close to an endpoint
-    if ( angle_dist(x, e1) < epsilon || angle_dist(x, e2) < epsilon ) {
+    if ( angle_dist(x, e1) < epsilon || (!only_top && angle_dist(x, e2) < epsilon) ) {
       return ans;
     }
     //get the side of x
@@ -1121,7 +1121,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<bool>& v) {
  * to check this, we take the top of ell (pi/2) and map it first under g, 
  * then f, and get those trajectories
  * **************************************************************************/
-bool Lamination::endpoints_map_near_endpoints(int depth, double epsilon, double scale, int verbose) {
+bool Lamination::endpoints_map_near_endpoints(int depth, double epsilon, double scale, bool only_top, bool only_G, int verbose) {
   if (verbose>0) {
     std::cout << "Checking for endpoints with depth " << depth << " epsilon " << epsilon << " and scale " << scale << "\n";
   }
@@ -1129,12 +1129,14 @@ bool Lamination::endpoints_map_near_endpoints(int depth, double epsilon, double 
   PartiallyDefinedMap gI = g.inverse();
   
   double gx = gI.act_on_point(PI/2.0);
-  std::vector<bool> T1 = trajectory(gx, depth+1, epsilon, scale);
+  std::vector<bool> T1 = trajectory(gx, depth+1, epsilon, scale, only_top);
   if (verbose>0) std::cout << "Found G(pi/2) trajectory: " << T1 << "\n";
   if ((int)T1.size() < depth+1) return true;
   
+  if (only_G) return false;
+  
   double fx = fI.act_on_point(PI/2.0);
-  std::vector<bool> T2 = trajectory(fx, depth+1, epsilon, scale);
+  std::vector<bool> T2 = trajectory(fx, depth+1, epsilon, scale, only_top);
   if (verbose>0) std::cout << "Found F(pi/2) trajectory: " << T2 << "\n";
   if ((int)T2.size() < depth+1) return true;
   
@@ -1144,8 +1146,20 @@ bool Lamination::endpoints_map_near_endpoints(int depth, double epsilon, double 
 /***************************************************************************
  * get the trajectories of G(pi/2) and F(pi/2)
  * *************************************************************************/
-
-
+void Lamination::top_trajectories(int depth, 
+                                  std::vector<bool>& tG, 
+                                  std::vector<bool>& tF) {
+  PartiallyDefinedMap fI = f.inverse();
+  PartiallyDefinedMap gI = g.inverse();
+  double gx = gI.act_on_point(PI/2.0);
+  std::vector<bool> T1 = trajectory(gx, depth+1, 0.00001, -1);
+  T1.insert(T1.begin(), 1);
+  double fx = fI.act_on_point(PI/2.0);
+  std::vector<bool> T2 = trajectory(fx, depth+1, 0.00001, -1);
+  T2.insert(T2.begin(), 0);
+  tG = T1;
+  tF = T2;
+}
 
 
 

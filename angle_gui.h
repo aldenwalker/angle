@@ -122,6 +122,7 @@ struct AngleGui {
   WidgetCheck W_param_plot_points;
   WidgetCheck W_param_endpoints;
   WidgetIntSelector W_param_endpoints_depth;
+  WidgetButton W_param_write_trajectories;
   WidgetText W_param_mouse_lambda;
   WidgetText W_param_mouse_theta;
   
@@ -146,6 +147,7 @@ struct AngleGui {
   void S_param_endpoints_depth(void* e);
   void S_param_plot_points(void* e);
   void S_param_draw(void* e);
+  void S_param_write_trajectories(void* e);
   
   void S_lam_depth(void* e);
   void S_lam_backward_depth(void* e);

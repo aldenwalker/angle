@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cmath>
 #include <algorithm>
+#include <list>
 
 #include "angle_gui.h"
 
@@ -460,7 +461,7 @@ void AngleGui::S_param_endpoints_depth(void* e) {
     param_endpoints_depth += 1;
   }
   W_param_endpoints_depth.update_value(param_endpoints_depth);
-  draw_param();
+  if (param_endpoints) draw_param();
 }
 
 
@@ -471,6 +472,42 @@ void AngleGui::S_param_plot_points(void* e) {
   W_param_plot_points.checked = param_plot_points;
   W_param_plot_points.redraw();
   draw_param();
+}
+
+void AngleGui::S_param_write_trajectories(void* e) {
+  XEvent* ee = (XEvent*)e;
+  if (ee->type != ButtonPress) return;
+  double theta_step = 2.0*PI/param_num_pixel_groups_width;
+  double lambda = 1.999;
+  std::list<std::vector<bool> > trajs(0);
+  for (double theta = 0.0; theta < 2.0*PI; theta += theta_step) {
+    Lamination L(lambda, theta);
+    std::vector<bool> tG,tF;
+    L.top_trajectories(param_endpoints_depth, tG, tF);
+    trajs.push_back(tG);
+    //std::cout << lambda << " " << theta << " ";
+    //for (int i=0; i<(int)tG.size(); ++i) std::cout << tG[i];
+    //std::cout << "\n";
+  }
+  std::list<std::vector<bool> >::iterator it1, it2;
+  it1 = trajs.begin();
+  it2 = trajs.begin(); ++it2;
+  while (it1 != trajs.end() && it2 != trajs.end()) {
+    if (*it1 == *it2) {
+      it2 = trajs.erase(it2);
+    } else {
+      ++it1;
+      ++it2;
+    }
+  }
+  
+  it1 = trajs.begin();
+  while (it1 != trajs.end()) {
+    for (int i=0; i<(int)it1->size(); ++i) std::cout << (*it1)[i];
+    std::cout << ",";
+    ++it1;
+  }
+  std::cout << "\n";
 }
 
 void AngleGui::S_lam_draw(void* ee) {
@@ -775,11 +812,18 @@ void AngleGui::recompute_lam_data() {
     std::cout << "Leading eigenvalue: " << inclusion_graph.approximate_leading_eigenvalue(inclusion_graph.num_verts) << "\n";
     std::cout << inclusion_graph.mathematica_string() << "\n";
   }
+  double pg_size = (param_pixel_group_lambda_size > param_pixel_group_theta_size ? param_pixel_group_lambda_size : param_pixel_group_theta_size);
+  double epsilon = 2*pg_size;
+  double scale = 1.1*lam_lambda;
+  std::vector<bool> tF,tG;
+  L.top_trajectories(lam_depth, tG, tF);
+  T.str("");
+  T << "Trajectories of pi/2: ";
+  for (int i=0; i<(int)tG.size(); ++i) T << tG[i];
+  T << " ";
+  for (int i=0; i<(int)tF.size(); ++i) T << tF[i];
+  W_lam_trajectories.update_text(T.str());
   
-  
-  //double pg_size = (param_pixel_group_lambda_size > param_pixel_group_theta_size ? param_pixel_group_lambda_size : param_pixel_group_theta_size);
-  //double epsilon = 2*pg_size;
-  //double scale = lam_lambda;
   //if (L.endpoints_map_near_endpoints(lam_depth, epsilon, scale, 0) ? 1 : 0) {
   //  std::cout << "Endpoints: yes\n";
   //} else {
@@ -891,7 +935,7 @@ void AngleGui::draw_param() {
           double pg_size = (param_pixel_group_lambda_size > param_pixel_group_theta_size ? param_pixel_group_lambda_size : param_pixel_group_theta_size);
           double epsilon = 2*pg_size;
           double scale = 1.1*lambda;
-          param_grid[i][j].w = (L.endpoints_map_near_endpoints(param_endpoints_depth, epsilon, scale) ? 1 : 0);
+          param_grid[i][j].w = (L.endpoints_map_near_endpoints(param_endpoints_depth, epsilon, scale, false, true, 0) ? 1 : 0);
         } else {
           param_grid[i][j].w = 0;
         }
@@ -1097,6 +1141,7 @@ void AngleGui::pack_window() {
   W_param_endpoints = WidgetCheck(this, -1, "Endpoints", param_endpoints, &AngleGui::S_param_endpoints);
   W_param_endpoints_depth = WidgetIntSelector(this, -1, "Depth:", param_endpoints_depth, &AngleGui::S_param_endpoints_depth);
   W_param_plot_points = WidgetCheck(this, -1, "Plot points", param_plot_points, &AngleGui::S_param_plot_points);
+  W_param_write_trajectories = WidgetButton(this, -1, -1, "Write traj.", &AngleGui::S_param_write_trajectories);
   W_param_mouse_lambda = WidgetText(this, 300, "Mouse lambda: (initializing)");
   W_param_mouse_theta = WidgetText(this, 300, "Mouse theta: (initializing)");
   
@@ -1139,6 +1184,7 @@ void AngleGui::pack_window() {
   pack_widget_upper_right(&W_param_plot, &W_param_endpoints);
   pack_widget_upper_right(&W_param_plot, &W_param_endpoints_depth);
   pack_widget_upper_right(&W_param_plot, &W_param_plot_points);
+  pack_widget_upper_right(&W_param_plot, &W_param_write_trajectories);
   
   pack_widget_upper_right(&W_param_zoom_out, &W_lam_plot);
   pack_widget_upper_right(&W_lam_plot, &W_lam_depth);
