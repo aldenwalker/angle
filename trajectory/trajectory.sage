@@ -166,16 +166,16 @@ class AugmentedTrajectory:
     var('l');
     n = self.depth - 1
     f = self.X[n] - l^n*(self.X[0] - r_set(self.X[0],self.T[0]))
-    print self
-    print l^n*(self.X[0] - r_set(self.X[0],self.T[0]))
-    print f
+    #print self
+    #print l^n*(self.X[0] - r_set(self.X[0],self.T[0]))
+    #print f
     for i in xrange(0, n-1):
       f -= l^(n-i-1) * (r_set(self.X[i],self.T[i]) - r_set(self.X[i+1],self.T[i+1]))
-      print self.X[i], self.T[i], r_set(self.X[i], self.T[i]), l^(n-i-1) * (r_set(self.X[i],self.T[i]) - r_set(self.X[i+1],self.T[i+1]))
+      #print self.X[i], self.T[i], r_set(self.X[i], self.T[i]), l^(n-i-1) * (r_set(self.X[i],self.T[i]) - r_set(self.X[i+1],self.T[i+1]))
     f -= r_set(self.X[n-1], self.T[n-1])
-    print r_set(self.X[n-1], self.T[n-1])
+    #print r_set(self.X[n-1], self.T[n-1])
     f *= (l-1)/(l^n-1)
-    print f
+    #print f
     return f
     
 
@@ -187,8 +187,8 @@ def constant_trajectory_thetas(x, starting_map, depth):
   at = AugmentedTrajectory(x, 0, 2, depth, starting_map=starting_map)
   at = at.next_theta_trajectory()
   while True:
-    while 0 in at.theta_dist_cons()[0][1:]:
-      at = at.next_theta_trajectory()
+    #while 0 in at.theta_dist_cons()[0][1:]:
+    #  at = at.next_theta_trajectory()
     if at.theta > 2:
       break
     L.append( (at, at.constant_trajectory_theta_func()) )
