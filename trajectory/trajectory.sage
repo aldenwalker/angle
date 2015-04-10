@@ -162,7 +162,7 @@ class AugmentedTrajectory:
     """Return a function which produces theta given lambda such that 
     the endpoint of the trajectory remains fixed; here the "endpoint"
     of the trajectory is the first place it hits an integer"""
-    var('l');
+    var('l j');
     n = min([i for i in xrange(1,self.depth) if self.X[i].is_integral()])
     f = self.X[n] - l^n*(self.X[0] - r_set(self.X[0],self.T[0]))
     #print self
@@ -173,7 +173,7 @@ class AugmentedTrajectory:
       #print self.X[i], self.T[i], r_set(self.X[i], self.T[i]), l^(n-i-1) * (r_set(self.X[i],self.T[i]) - r_set(self.X[i+1],self.T[i+1]))
     f -= r_set(self.X[n-1], self.T[n-1])
     #print r_set(self.X[n-1], self.T[n-1])
-    f *= (l-1)/(l^n-1)
+    f *= 1/sum(l^j,j,0,n-1)
     #print f
     return (n,f)
     
@@ -193,6 +193,8 @@ def constant_trajectory_thetas(x, starting_map, depth):
     L.append( (at, at.constant_trajectory_theta_func()) )
     at = at.next_theta_trajectory()
   
+  print "Got initial list"
+  
   #get the bounds over which the functions are valid
   #first we must remove duplicates from the list
   i = 0
@@ -202,57 +204,71 @@ def constant_trajectory_thetas(x, starting_map, depth):
     else:
       i += 1
   
-  print "Got initial deduped list:"
-  print L
-
-  #now scan through and find how long each function persists
-  L_done = []
-  L_still_valid = [[f,en,at] for at,(en,f) in L]
-  while True:
-    print "Still valid:"
-    print L_still_valid
-    #find all the intersections of functions next to each other
-    intersections = []
-    for i in xrange(len(L_still_valid)-1):
-      f1 = L_still_valid[i][0]
-      f2 = L_still_valid[i+1][0]
-      s = solve(f1==f2,l,solution_dict=True)
-      s = [x[l] for x in s]
-      s = [x for x in s if x.imag_part().is_zero()]
-      s = [x for x in s if (1 < n(x) and n(x) < 2) or                    \
-                           (((x-1).is_zero() or (x-1).is_positive()) and \
-                            ((x-2).is_zero() or (x-2).is_negative()))]
-      if len(s) > 1:
-        raise ValueError("I think there should be at most one solution?")
-      if len(s) > 0:
-        intersections.append( (i,s[0]) )
-    print "Got intersections", intersections
-    #find the closest intersection
-    if len(intersections) == 0:
-      L_done.extend( [ (f,en,at,2,1) for f,en,at in L_still_valid] )
-      break
-    max_int_i = None
-    for i in xrange(len(intersections)):
-      if max_int_i == None or (intersections[i][1]-intersections[max_int_i][1]).is_negative():
-        max_int_i = i
-    max_int = intersections[max_int_i][1]
-    #get all the intersections which involve that value
-    intersections = [x for x in intersections if (x[1]-max_int).is_zero()]
-    print "Got maximal intersections", intersections
-    #in each intersection, remove the one which has the larger n from the list
-    #do this in reverse so as not to screw up the indices
-    for (i,s) in reversed(intersections):
-      f1,n1,at1 = L_still_valid[i]
-      f2,n2,at2 = L_still_valid[i+1]
-      if n1 < n2:
-        L_done.append( (f2, n2, at2, 2, max_int) )
-        del L_still_valid[i+1]
-      else:
-        L_done.append( (f1,n1,at1,2,max_int) )
-        del L_still_valid[i]
-    
-  return L_done
+  print "Deduped list"
+  #print L
   
+  #for each depth (increasing), find the functions of that depth
+  #and scan through for everything they cut
+  L = [[f,en,at,2,1] for at,(en,f) in L]
+  for N in xrange(1,depth):
+    #find the functions of this depth
+    L_inds_this_depth = [i for i in xrange(len(L)) if L[i][1] == N]
+    print "Trimming with ", len(L_inds_this_depth), " curves of depth ", N
+    for i in L_inds_this_depth:
+      f1,en1,at1,high1,low1 = L[i]
+      #scan backwards, cutting off (and being cut off by) the functions
+      #"seen" means that we've *we* have been cut off (or the intersection is None or 1)
+      j=i-1
+      min_seen_depth = None
+      while j >= 0 and (min_seen_depth == None or min_seen_depth > 1):
+        f2,en2,at2,high2,low2 = L[j]
+        if min_seen_depth != None and en2 >= min_seen_depth:
+          j -= 1
+          continue
+        #compute the intersection
+        try:
+          s = find_root(f1-f2,max(low1,low2),2)
+        except RuntimeError:
+          s = None
+        if s == None or abs(s-1) < 1e-8:
+            min_seen_depth = en2
+        else:
+          if en1 < en2: # we are cutting them off
+            L[j][-1] = s
+          else:         # we are being cut off
+            L[i][-1] = s
+            low1 = s
+            min_seen_depth = en2
+        j -= 1
+        continue
+      #now do the same scan, except forwards
+      j = i+1
+      min_seen_depth = None
+      while j < len(L) and (min_seen_depth == None or min_seen_depth > 1):
+        f2,en2,at2,high2,low2 = L[j]
+        if min_seen_depth != None and en2 >= min_seen_depth:
+          j += 1
+          continue
+        #compute the intersection
+        try:
+          s = find_root(f1-f2,max(low1,low2),2)
+        except RuntimeError:
+          s = None
+        if s == None or abs(s-1) < 1e-8:
+            min_seen_depth = en2
+        else:
+          if en1 < en2: # we are cutting them off
+            L[j][-1] = s
+          else:         # we are being cut off
+            L[i][-1] = s
+            low1 = s
+            min_seen_depth = en2
+        j += 1
+        continue
+  
+  return L
+            
+    
 
 
 
