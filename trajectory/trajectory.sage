@@ -159,12 +159,11 @@ class AugmentedTrajectory:
     return new_at
   
   def constant_trajectory_theta_func(self):
-    """return a function which produces theta given lambda such that 
-    the endpoint of the trajectory remains fixed; assuming that 
-    no point within the trajectory hits an integer as 
-    we changed lambda"""
+    """Return a function which produces theta given lambda such that 
+    the endpoint of the trajectory remains fixed; here the "endpoint"
+    of the trajectory is the first place it hits an integer"""
     var('l');
-    n = self.depth - 1
+    n = min([i for i in xrange(1,self.depth) if self.X[i].is_integral()])
     f = self.X[n] - l^n*(self.X[0] - r_set(self.X[0],self.T[0]))
     #print self
     #print l^n*(self.X[0] - r_set(self.X[0],self.T[0]))
@@ -176,7 +175,7 @@ class AugmentedTrajectory:
     #print r_set(self.X[n-1], self.T[n-1])
     f *= (l-1)/(l^n-1)
     #print f
-    return f
+    return (n,f)
     
 
 
@@ -194,7 +193,65 @@ def constant_trajectory_thetas(x, starting_map, depth):
     L.append( (at, at.constant_trajectory_theta_func()) )
     at = at.next_theta_trajectory()
   
-  return L
+  #get the bounds over which the functions are valid
+  #first we must remove duplicates from the list
+  i = 0
+  while i < len(L)-1:
+    if (L[i][1][1]-L[i+1][1][1]).is_zero():
+      del L[i+1]
+    else:
+      i += 1
+  
+  print "Got initial deduped list:"
+  print L
+
+  #now scan through and find how long each function persists
+  L_done = []
+  L_still_valid = [[f,en,at] for at,(en,f) in L]
+  while True:
+    print "Still valid:"
+    print L_still_valid
+    #find all the intersections of functions next to each other
+    intersections = []
+    for i in xrange(len(L_still_valid)-1):
+      f1 = L_still_valid[i][0]
+      f2 = L_still_valid[i+1][0]
+      s = solve(f1==f2,l,solution_dict=True)
+      s = [x[l] for x in s]
+      s = [x for x in s if x.imag_part().is_zero()]
+      s = [x for x in s if (1 < n(x) and n(x) < 2) or                    \
+                           (((x-1).is_zero() or (x-1).is_positive()) and \
+                            ((x-2).is_zero() or (x-2).is_negative()))]
+      if len(s) > 1:
+        raise ValueError("I think there should be at most one solution?")
+      if len(s) > 0:
+        intersections.append( (i,s[0]) )
+    print "Got intersections", intersections
+    #find the closest intersection
+    if len(intersections) == 0:
+      L_done.extend( [ (f,en,at,2,1) for f,en,at in L_still_valid] )
+      break
+    max_int_i = None
+    for i in xrange(len(intersections)):
+      if max_int_i == None or (intersections[i][1]-intersections[max_int_i][1]).is_negative():
+        max_int_i = i
+    max_int = intersections[max_int_i][1]
+    #get all the intersections which involve that value
+    intersections = [x for x in intersections if (x[1]-max_int).is_zero()]
+    print "Got maximal intersections", intersections
+    #in each intersection, remove the one which has the larger n from the list
+    #do this in reverse so as not to screw up the indices
+    for (i,s) in reversed(intersections):
+      f1,n1,at1 = L_still_valid[i]
+      f2,n2,at2 = L_still_valid[i+1]
+      if n1 < n2:
+        L_done.append( (f2, n2, at2, 2, max_int) )
+        del L_still_valid[i+1]
+      else:
+        L_done.append( (f1,n1,at1,2,max_int) )
+        del L_still_valid[i]
+    
+  return L_done
   
 
 
