@@ -217,7 +217,7 @@ def constant_trajectory_thetas(x, starting_map, depth):
     for i in L_inds_this_depth:
       f1,en1,at1,high1,low1 = L[i]
       #scan backwards, cutting off (and being cut off by) the functions
-      #"seen" means that we've *we* have been cut off (or the intersection is None or 1)
+      #"seen" means that we've *we* have been cut off
       j=i-1
       min_seen_depth = None
       while j >= 0 and (min_seen_depth == None or min_seen_depth > en1):
@@ -227,10 +227,10 @@ def constant_trajectory_thetas(x, starting_map, depth):
           continue
         #compute the intersection
         try:
-          s = find_root(f1-f2,max(low1,low2),2)
+          s = find_root(f1-f2,max(low1,low2)+1e-8,2)
         except RuntimeError:
           s = None
-        if s == None or abs(s-1) < 1e-8:
+        if s == None or s < low1 + 1e-8:
             min_seen_depth = en2
         else:
           if en1 < en2: # we are cutting them off
@@ -251,10 +251,10 @@ def constant_trajectory_thetas(x, starting_map, depth):
           continue
         #compute the intersection
         try:
-          s = find_root(f1-f2,max(low1,low2),2)
+          s = find_root(f1-f2,max(low1,low2)+1e-8,2)
         except RuntimeError:
           s = None
-        if s == None or abs(s-1) < 1e-8:
+        if s == None or s < low1 + 1e-8:
             min_seen_depth = en2
         else:
           if en1 < en2: # we are cutting them off
