@@ -82,6 +82,20 @@ class AugmentedTrajectory:
       else:
         self.T.append( which_domain(self.X[-1]) )
   
+  @classmethod
+  def from_full_trajectory(cls, x, theta, lam, T):
+    depth = len(T)
+    X = [-1 for ell in T]
+    X[0] = x
+    for i in xrange(depth-1):
+      if not in_domain(X[i], T[i], extended=True):
+        raise ValueError("x must be in domain")
+      X[i+1] = E(X[i], theta, lam, T[i])
+    ans = cls(x, theta, lam, depth, blank=True)
+    ans.X = [p for p in X]
+    ans.T = [t for t in T]
+    return ans
+  
   def __repr__(self):
     return "AugmentedTrajectory(" + str(self.X) + "," + str(self.T) + ',' + str(self.theta) + ',' + str(self.lam) + ')'
   
@@ -396,7 +410,18 @@ def theta_intervals_for_trajectory(x, lam, desired_trajectory):
 
 
 
-
+def find_feasible_regions(x1, T1, x2, T2):
+  """find the feasible region in the theta,lam parameter space
+  such that the points x1 and x2 have trajectories T1 and T2"""
+  
+  #get the theta intervals
+  theta_ints1 = theta_intervals_for_trajectory(x1, 2, T1)
+  theta_ints2 = theta_intervals_for_trajectory(x2, 2, T2)
+  
+  #build the augmented trajectories and theta as a function of lambda
+  #for each theta interval
+  for ti,pi in theta_ints1:
+    AugmentedTrajectory.from_full_trajectory(x1, ti[0], 2, T1)
 
 
 
