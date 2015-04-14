@@ -219,20 +219,20 @@ def constant_trajectory_thetas(x, starting_map, depth):
     for i in L_inds_this_depth:
       f1,en1,at1,high1,low1 = L[i]
       #scan backwards, cutting off (and being cut off by) the functions
-      #"seen" means that we've *we* have been cut off (or the intersection is None or 1)
+      #"seen" means that we've *we* have been cut off
       j=i-_sage_const_1 
       min_seen_depth = None
-      while j >= _sage_const_0  and (min_seen_depth == None or min_seen_depth > _sage_const_1 ):
+      while j >= _sage_const_0  and (min_seen_depth == None or min_seen_depth > en1):
         f2,en2,at2,high2,low2 = L[j]
         if min_seen_depth != None and en2 >= min_seen_depth:
           j -= _sage_const_1 
           continue
         #compute the intersection
         try:
-          s = find_root(f1-f2,max(low1,low2),_sage_const_2 )
+          s = find_root(f1-f2,max(low1,low2)+_sage_const_1en8 ,_sage_const_2 )
         except RuntimeError:
           s = None
-        if s == None or abs(s-_sage_const_1 ) < _sage_const_1en8 :
+        if s == None or s < low1 + _sage_const_1en8 :
             min_seen_depth = en2
         else:
           if en1 < en2: # we are cutting them off
@@ -246,17 +246,17 @@ def constant_trajectory_thetas(x, starting_map, depth):
       #now do the same scan, except forwards
       j = i+_sage_const_1 
       min_seen_depth = None
-      while j < len(L) and (min_seen_depth == None or min_seen_depth > _sage_const_1 ):
+      while j < len(L) and (min_seen_depth == None or min_seen_depth > en1):
         f2,en2,at2,high2,low2 = L[j]
         if min_seen_depth != None and en2 >= min_seen_depth:
           j += _sage_const_1 
           continue
         #compute the intersection
         try:
-          s = find_root(f1-f2,max(low1,low2),_sage_const_2 )
+          s = find_root(f1-f2,max(low1,low2)+_sage_const_1en8 ,_sage_const_2 )
         except RuntimeError:
           s = None
-        if s == None or abs(s-_sage_const_1 ) < _sage_const_1en8 :
+        if s == None or s < low1 + _sage_const_1en8 :
             min_seen_depth = en2
         else:
           if en1 < en2: # we are cutting them off

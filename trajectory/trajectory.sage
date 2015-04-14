@@ -1,3 +1,5 @@
+#the domain of g is [0,1]; the domain of f is [1,2]
+
 
 def r(x):
   """round x to the nearest multiple of 1/2; 
@@ -55,7 +57,7 @@ def E(x, theta, lam, which=None):
   else:
     rounded = r(x)
     return lam*(x-rounded) + rounded + theta
-  
+
 
 class AugmentedTrajectory:
   def __init__(self, x, theta, lam, depth, starting_map=None, blank=False):
@@ -217,20 +219,20 @@ def constant_trajectory_thetas(x, starting_map, depth):
     for i in L_inds_this_depth:
       f1,en1,at1,high1,low1 = L[i]
       #scan backwards, cutting off (and being cut off by) the functions
-      #"seen" means that we've *we* have been cut off (or the intersection is None or 1)
+      #"seen" means that we've *we* have been cut off
       j=i-1
       min_seen_depth = None
-      while j >= 0 and (min_seen_depth == None or min_seen_depth > 1):
+      while j >= 0 and (min_seen_depth == None or min_seen_depth > en1):
         f2,en2,at2,high2,low2 = L[j]
         if min_seen_depth != None and en2 >= min_seen_depth:
           j -= 1
           continue
         #compute the intersection
         try:
-          s = find_root(f1-f2,max(low1,low2),2)
+          s = find_root(f1-f2,max(low1,low2)+1e-8,2)
         except RuntimeError:
           s = None
-        if s == None or abs(s-1) < 1e-8:
+        if s == None or s < low1 + 1e-8:
             min_seen_depth = en2
         else:
           if en1 < en2: # we are cutting them off
@@ -244,17 +246,17 @@ def constant_trajectory_thetas(x, starting_map, depth):
       #now do the same scan, except forwards
       j = i+1
       min_seen_depth = None
-      while j < len(L) and (min_seen_depth == None or min_seen_depth > 1):
+      while j < len(L) and (min_seen_depth == None or min_seen_depth > en1):
         f2,en2,at2,high2,low2 = L[j]
         if min_seen_depth != None and en2 >= min_seen_depth:
           j += 1
           continue
         #compute the intersection
         try:
-          s = find_root(f1-f2,max(low1,low2),2)
+          s = find_root(f1-f2,max(low1,low2)+1e-8,2)
         except RuntimeError:
           s = None
-        if s == None or abs(s-1) < 1e-8:
+        if s == None or s < low1 + 1e-8:
             min_seen_depth = en2
         else:
           if en1 < en2: # we are cutting them off
@@ -289,14 +291,99 @@ def theta_breakpoint_grid(x, starting_map, lam_step, depth):
 
 
 
+def E_one_point_theta_interval(x, theta_int, lam, which):
+  """give the output interval applying all theta values to the 
+  point x"""
+  #we can just apply it to the first point and the last point and that's it
+  return [E(x,theta_int[0], lam, which=which), E(x,theta_int[1], lam, which=which)]
+  
+
+def E_point_interval_theta_interval(point_int, theta_int, lam, which):
+  """give the output interval of applying the theta range to the 
+  point range (the first theta to the first point, the last theta 
+  to the last point, etc)"""
+  return [E(point_int[0], theta_int[0], lam, which), \
+          E(point_int[1], theta_int[1], lam, which)]
+
+def last_point_in_domain(x, which):
+  if not in_domain(x, which, extended==True):
+    raise ValueError("x needs to be in the domain")
+  
+  if x.is_integral():
+    if x%2==0 != which=='g':
+      return x
+    else:
+      return x+1
+  else:
+    return ceiling(x)
+
+def split_interval(theta_int, point_int, which):
+  """split the interval point_int into regions which 
+  fall into the (extended) domain of the map "which".  Also split the 
+  (linearly corresponding) theta interval, and return a list of 
+  pairs of theta_int, point_int"""
+  if in_domain(point_int[0], which):
+    start_point = point_int[0]
+  else:
+    next_ok_point = ceiling(point_int[0])
+    if next_ok_point > point_int[1]:
+      return []
+    start_point = next_ok_point
+  
+  ans = []
+  while True:
+    #start point has the first point which lies in the domain
+    #find the minimum of the endpoint of the interval and the endpoint 
+    #of the domain, and chop off that interval, and repeat
+    last_domain_point = last_point_in_domain(start_point, which)
+    if last_domain_point >= point_int[1]:
+      ans.append([start_point, point_int[1]])
+      break
+    else:
+      ans.append([start_point, last_domain_point])
+    #find the next interval
+    next_domain_beginning = last_domain_point + 1
+    if point_int[1] < next_domain_beginning:
+      break
+    start_point = next_domain_beginning
+  
+  #now scale to get the appropriate theta intervals
+  scaling_factor = (theta_int[1]-theta_int[0])/(point_int[1]-point_int[0])
+  theta_ans = [[scaling_factor*(a1-point_int[0]), scaling_factor*(a2-point_int[0])] for a1,a2 in ans]
+  
+  return zip(theta_ans, ans)
 
 
-
-
-
-
-
-
+def theta_intervals_for_trajectory(x, lam, desired_trajectory):
+  """return a set of intervals of theta for which the trajectory 
+  will be admissible for parameters theta, lam with input point x"""
+  if len(desired_trajectory) == 0:
+    return [[0,2]]
+  if not in_domain(x, desired_trajectory[0], extended=True):
+    return []
+  if len(desired_trajectory) == 1:
+    return [[0,2]]
+  #compute the interval of points which are accessible from 
+  #the starting point with any theta
+  initial_interval = E_one_point_theta_interval(x, [0,2], lam, desired_trajectory[0])
+  #split the interval into ones which agree with our next letter
+  current_intervals = split_interval([0,2], initial_interval, desired_trajectory[1])
+  i = 1
+  while i < len(desired_trajectory)-1:
+    print "Current intervals: ", current_intervals
+    #go through all of our current intervals, act by them, and 
+    #pick out the bits which agree with the desired trajectory
+    new_intervals = []
+    for theta_int, point_int in current_intervals:
+      #get the output interval
+      oi = E_point_interval_theta_interval(point_int, theta_int, lam, desired_trajectory[i])
+      #split it
+      new_intervals.extend(split_interval(theta_int, oi, desired_trajectory[i+1]))
+    current_intervals = new_intervals
+    i += 1
+  
+  #the remaining intervals are the intervals we want
+  return current_intervals
 
 
 
