@@ -306,16 +306,16 @@ def E_point_interval_theta_interval(point_int, theta_int, lam, which):
           E(point_int[1], theta_int[1], lam, which)]
 
 def last_point_in_domain(x, which):
-  if not in_domain(x, which, extended==True):
+  if not in_domain(x, which, extended=True):
     raise ValueError("x needs to be in the domain")
-  
+  #print "Getting last point in domain of ", x, " in ", which, ", integral: ", x.is_integral()
   if x.is_integral():
-    if x%2==0 != which=='g':
+    if (x%2==0) != (which=='g'):
       return x
     else:
       return x+1
   else:
-    return ceiling(x)
+    return ceil(x)
 
 def split_interval(theta_int, point_int, which):
   """split the interval point_int into regions which 
@@ -325,7 +325,7 @@ def split_interval(theta_int, point_int, which):
   if in_domain(point_int[0], which):
     start_point = point_int[0]
   else:
-    next_ok_point = ceiling(point_int[0])
+    next_ok_point = ceil(point_int[0])
     if next_ok_point > point_int[1]:
       return []
     start_point = next_ok_point
@@ -336,6 +336,7 @@ def split_interval(theta_int, point_int, which):
     #find the minimum of the endpoint of the interval and the endpoint 
     #of the domain, and chop off that interval, and repeat
     last_domain_point = last_point_in_domain(start_point, which)
+    print "Working on start point ", start_point, " with map ", which, ", last_domain: ", last_domain_point
     if last_domain_point >= point_int[1]:
       ans.append([start_point, point_int[1]])
       break
@@ -348,8 +349,12 @@ def split_interval(theta_int, point_int, which):
     start_point = next_domain_beginning
   
   #now scale to get the appropriate theta intervals
-  scaling_factor = (theta_int[1]-theta_int[0])/(point_int[1]-point_int[0])
-  theta_ans = [[scaling_factor*(a1-point_int[0]), scaling_factor*(a2-point_int[0])] for a1,a2 in ans]
+  if point_int[1] == point_int[0]:
+    scaling_factor = 0
+  else:
+    scaling_factor = (theta_int[1]-theta_int[0])/(point_int[1]-point_int[0])
+  theta_ans = [[theta_int[0] + scaling_factor*(a1-point_int[0]), \
+                theta_int[0] + scaling_factor*(a2-point_int[0])] for a1,a2 in ans]
   
   return zip(theta_ans, ans)
 
@@ -375,10 +380,14 @@ def theta_intervals_for_trajectory(x, lam, desired_trajectory):
     #pick out the bits which agree with the desired trajectory
     new_intervals = []
     for theta_int, point_int in current_intervals:
+      print "Doing interval ", theta_int, point_int 
       #get the output interval
       oi = E_point_interval_theta_interval(point_int, theta_int, lam, desired_trajectory[i])
+      print "Got output ", oi
       #split it
-      new_intervals.extend(split_interval(theta_int, oi, desired_trajectory[i+1]))
+      si = split_interval(theta_int, oi, desired_trajectory[i+1])
+      print "Split to ", si
+      new_intervals.extend(si)
     current_intervals = new_intervals
     i += 1
   
