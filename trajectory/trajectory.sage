@@ -350,7 +350,7 @@ def split_interval(theta_int, point_int, which):
     #find the minimum of the endpoint of the interval and the endpoint 
     #of the domain, and chop off that interval, and repeat
     last_domain_point = last_point_in_domain(start_point, which)
-    print "Working on start point ", start_point, " with map ", which, ", last_domain: ", last_domain_point
+    #print "Working on start point ", start_point, " with map ", which, ", last_domain: ", last_domain_point
     if last_domain_point >= point_int[1]:
       ans.append([start_point, point_int[1]])
       break
@@ -373,36 +373,57 @@ def split_interval(theta_int, point_int, which):
   return zip(theta_ans, ans)
 
 
-def theta_intervals_for_trajectory(x, lam, desired_trajectory):
+def intervals_overlap(i1, i2):
+  """return true iff the two intervals intersect"""
+  if i1[1] < i2[0] or i2[1] < i1[0]:
+    return False
+  else:
+    return True
+
+
+
+def theta_intervals_for_trajectory(x, lam, desired_trajectory, extended=True):
   """return a set of intervals of theta for which the trajectory 
-  will be admissible for parameters theta, lam with input point x"""
+  will be admissible for parameters theta, lam with input point x.
+  If extended=True, then it will make sure that the leftmost and 
+  rightmost intervals stop at the real place they should, rather than 0 and 2"""
   if len(desired_trajectory) == 0:
     return [[0,2]]
   if not in_domain(x, desired_trajectory[0], extended=True):
     return []
   if len(desired_trajectory) == 1:
     return [[0,2]]
-  #compute the interval of points which are accessible from 
-  #the starting point with any theta
-  initial_interval = E_one_point_theta_interval(x, [0,2], lam, desired_trajectory[0])
-  #split the interval into ones which agree with our next letter
-  current_intervals = split_interval([0,2], initial_interval, desired_trajectory[1])
+  if not extended:
+    #compute the interval of points which are accessible from 
+    #the starting point with any theta
+    initial_interval = E_one_point_theta_interval(x, [0,2], lam, desired_trajectory[0])
+    #split the interval into ones which agree with our next letter
+    current_intervals = split_interval([0,2], initial_interval, desired_trajectory[1])
+  else:
+    initial_interval = E_one_point_theta_interval(x, [-1,3], lam, desired_trajectory[0])
+    current_intervals = split_interval([-1,3], initial_interval, desired_trajectory[1])
+    #go through the intervals and discard all those that don't overlap [0,2]
+    current_intervals = [(theta_int, point_int) for (theta_int, point_int) in current_intervals if intervals_overlap(theta_int, [0,2])]
   i = 1
   while i < len(desired_trajectory)-1:
-    print "Current intervals: ", current_intervals
+    #print "Current intervals: ", current_intervals
     #go through all of our current intervals, act by them, and 
     #pick out the bits which agree with the desired trajectory
     new_intervals = []
     for theta_int, point_int in current_intervals:
-      print "Doing interval ", theta_int, point_int 
+      #print "Doing interval ", theta_int, point_int 
       #get the output interval
       oi = E_point_interval_theta_interval(point_int, theta_int, lam, desired_trajectory[i])
-      print "Got output ", oi
+      #print "Got output ", oi
       #split it
       si = split_interval(theta_int, oi, desired_trajectory[i+1])
-      print "Split to ", si
+      #print "Split to ", si
       new_intervals.extend(si)
+        
     current_intervals = new_intervals
+    if extended:
+      # we need to discard any outside intervals
+      current_intervals = [(theta_int, point_int) for (theta_int, point_int) in current_intervals if intervals_overlap(theta_int, [0,2])]
     i += 1
   
   #the remaining intervals are the intervals we want
@@ -410,23 +431,125 @@ def theta_intervals_for_trajectory(x, lam, desired_trajectory):
 
 
 
-def find_feasible_regions(x1, T1, x2, T2):
+def find_feasible_regions(x1, T1, x2, T2, disregard_trivial_ints=True):
   """find the feasible region in the theta,lam parameter space
   such that the points x1 and x2 have trajectories T1 and T2"""
   
   #get the theta intervals
-  theta_ints1 = theta_intervals_for_trajectory(x1, 2, T1)
-  theta_ints2 = theta_intervals_for_trajectory(x2, 2, T2)
+  theta_ints1 = theta_intervals_for_trajectory(x1, 2, T1, extended=True)
+  theta_ints2 = theta_intervals_for_trajectory(x2, 2, T2, extended=True)
+  
+  #print "Found theta intervals for lambda=2:"
+  #print theta_ints1
+  #print theta_ints2
+  
+  if disregard_trivial_ints:
+    theta_ints1 = [(ti,pi) for (ti,pi) in theta_ints1 if ti[0] != ti[1]]
+    theta_ints2 = [(ti,pi) for (ti,pi) in theta_ints2 if ti[0] != ti[1]]
   
   #build the augmented trajectories and theta as a function of lambda
   #for each theta interval
+  theta_func_ints1 = []
   for ti,pi in theta_ints1:
-    AugmentedTrajectory.from_full_trajectory(x1, ti[0], 2, T1)
+    traj1 = AugmentedTrajectory.from_full_trajectory(x1, ti[0], 2, T1)
+    traj2 = AugmentedTrajectory.from_full_trajectory(x1, ti[1], 2, T1)
+    traj1_func = traj1.constant_trajectory_theta_func()
+    traj2_func = traj2.constant_trajectory_theta_func()
+    theta_func_ints1.append( [ti, traj1_func, traj2_func] )
+  theta_func_ints2 = []
+  for ti,pi in theta_ints2:
+    traj1 = AugmentedTrajectory.from_full_trajectory(x2, ti[0], 2, T2)
+    traj2 = AugmentedTrajectory.from_full_trajectory(x2, ti[1], 2, T2)
+    traj1_func = traj1.constant_trajectory_theta_func()
+    traj2_func = traj2.constant_trajectory_theta_func()
+    theta_func_ints2.append( [ti, traj1_func, traj2_func] )
+  
+  #for each func pair, find where the functions intersect to get 
+  # a minimal lambda value
+  for L in theta_func_ints1, theta_func_ints2:
+    for FP in L:
+      ti, (en1,f1), (en2, f2) = FP
+      if (f1-f2).is_zero():
+        s = 2
+      else:
+        try:
+          s = find_root(f1-f2,1+1e-8,2)
+        except RuntimeError:
+          s = None
+      if s == None or s < 1e-8:
+        min_lam = 1
+      else:
+        min_lam = s
+      FP.append(min_lam)
+  
+  intersecting_pairs = []
+  
+  #now go through and find pairs of func ints which overlap
+  for tfi1 in theta_func_ints1:
+    ti1, (en11, f11), (en12, f12), lam1 = tfi1
+    for tfi2 in theta_func_ints2:
+      ti2, (en21, f21), (en22, f22), lam2 = tfi2
+      if intervals_overlap(ti1, ti2):
+        if ti1[1] <= ti2[1]:
+          t,ell = ti1[1], 2
+        else:
+          t,ell = ti2[0], 2
+        intersecting_pairs.append( (t,ell, tfi1, tfi2) )
+        continue
+      elif ti1[1] < ti2[0]:
+        try:
+          s = find_root(f12-f21, max(lam1, lam2), 2)
+          t,ell = f12.substitute(l=s), s
+        except RuntimeError:
+          s = None
+      else:
+        try:
+          s = find_root(f22-f11, max(lam1, lam2), 2)
+          t,ell = f22.substitute(l=s), s
+        except RuntimeError:
+          s = None
+      if s != None:
+        intersecting_pairs.append( (t,ell, tfi1, tfi2) )
+        
+        
+  
+  return theta_func_ints1, theta_func_ints2, intersecting_pairs
+      
+        
 
 
-
-
-
+def process_trajectory_file(fname):
+  """Process a file which has two trajectories g* (i.e. 1*) and f* (i.e. 0*)
+  on each line, into guesses for theta, lambda.  The output is a 
+  file fname.params, which has theta, lambda, epsilon, where 0<=theta<=2pi
+  and epsilon gives the distance from the given point to all the found 
+  points of intersection.  Nothing rigorous"""
+  f = open(fname, 'r')
+  lines_out = []
+  for line in f:
+    print "Doing: ", line
+    T1, T2 = map(list, line.replace('0','f').replace('1','g').split(' '))
+    tfi1, tfi2, IP = find_feasible_regions(1, T1, 1, T2)
+    if len(IP) == 0:
+      print "Couldn't find params?"
+      continue
+    t,ell = 0,0
+    for ip in IP:
+      t += ip[0]
+      ell += ip[1]
+    t /= len(IP)
+    ell /= len(IP)
+    epsilon = 0
+    for ip in IP:
+      epsilon = max(epsilon, sqrt((t-ip[0])^2 + (ell-ip[1])^2))
+    lines_out.append( (n(t*pi), ell, epsilon) )
+    print "Got ", (n(t*pi), ell, epsilon)
+  f.close()
+  
+  f = open(fname+'.params', 'w')
+  for line in lines_out:
+    f.write(' '.join(map(str, line)) + '\n')
+  f.close()
 
 
 

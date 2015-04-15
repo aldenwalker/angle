@@ -935,7 +935,7 @@ void AngleGui::draw_param() {
           double pg_size = (param_pixel_group_lambda_size > param_pixel_group_theta_size ? param_pixel_group_lambda_size : param_pixel_group_theta_size);
           double epsilon = 2*pg_size;
           double scale = 1.1*lambda;
-          param_grid[i][j].w = (L.endpoints_map_near_endpoints(param_endpoints_depth, epsilon, scale, false, true, 0) ? 1 : 0);
+          param_grid[i][j].w = (L.endpoints_map_near_endpoints(param_endpoints_depth, epsilon, scale, false, false, 0) ? 1 : 0);
         } else {
           param_grid[i][j].w = 0;
         }
@@ -964,7 +964,7 @@ void AngleGui::draw_param() {
     int bcol = get_rgb_color(0,0,0);
     f.open("points_to_plot.txt");
     if (f.is_open()) {
-      while (0 != (f >> ell) && 0 != (f>>tee)) {
+      while (0 != (f >> tee) && 0 != (f>>ell)) {
         draw_param_point(ell, tee, bcol);
       }
     }
