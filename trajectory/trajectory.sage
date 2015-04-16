@@ -526,8 +526,13 @@ def process_trajectory_file(fname):
   points of intersection.  Nothing rigorous"""
   f = open(fname, 'r')
   lines_out = []
+  seen_lines = set()
   for line in f:
     print "Doing: ", line
+    if line in seen_lines:
+      continue
+    else:
+      seen_lines.add(line)
     T1, T2 = map(list, line.replace('0','f').replace('1','g').split(' '))
     tfi1, tfi2, IP = find_feasible_regions(1, T1, 1, T2)
     if len(IP) == 0:

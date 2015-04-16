@@ -960,12 +960,12 @@ void AngleGui::draw_param() {
   //if we're supposed to, draw all the points
   if (param_plot_points) {
     std::ifstream f;
-    double ell, tee;
+    double ell, tee, ep;
     int bcol = get_rgb_color(0,0,0);
     f.open("points_to_plot.txt");
     if (f.is_open()) {
-      while (0 != (f >> tee) && 0 != (f>>ell)) {
-        draw_param_point(ell, tee, bcol);
+      while (0 != (f >> tee) && 0 != (f>>ell) && 0 != (f>>ep)) {
+        draw_param_disk(ell, tee, ep, bcol);
       }
     }
   }
@@ -1023,6 +1023,18 @@ void AngleGui::draw_param_point(double L, double T, int col) {
   XSetForeground(display, PP.gc, col);
   XFillRectangle(display, PP.p, PP.gc, ip-2, jp-2, 4, 4);
   XCopyArea(display, PP.p, main_window, PP.gc, ip-2, jp-2, 4, 4, PP.ul.x + ip-2, PP.ul.y + jp-2);
+}
+
+//draw a circle on param
+void AngleGui::draw_param_disk(double L, double T, double r, int col) {
+  int ip,jp;
+  Widget& PP = W_param_plot;
+  param_LT_to_pixel(L, T, ip, jp);
+  XSetForeground(display, PP.gc, col);
+  double rad = r/param_pixel_theta_size;
+  if (rad < 2) rad = 2;
+  XFillArc(display, PP.p, PP.gc, ip-rad, jp-rad, 2*rad, 2*rad, 0, 360*64);
+  XCopyArea(display, PP.p, main_window, PP.gc, ip-rad, jp-rad, 2*rad, 2*rad, PP.ul.x + ip-rad, PP.ul.y + jp-rad);
 }
 
 /****************************************************************************

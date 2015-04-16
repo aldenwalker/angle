@@ -441,9 +441,9 @@ def find_feasible_regions(x1, T1, x2, T2, disregard_trivial_ints=True):
   theta_ints1 = theta_intervals_for_trajectory(x1, _sage_const_2 , T1, extended=True)
   theta_ints2 = theta_intervals_for_trajectory(x2, _sage_const_2 , T2, extended=True)
   
-  print "Found theta intervals for lambda=2:"
-  print theta_ints1
-  print theta_ints2
+  #print "Found theta intervals for lambda=2:"
+  #print theta_ints1
+  #print theta_ints2
   
   if disregard_trivial_ints:
     theta_ints1 = [(ti,pi) for (ti,pi) in theta_ints1 if ti[_sage_const_0 ] != ti[_sage_const_1 ]]
@@ -520,7 +520,38 @@ def find_feasible_regions(x1, T1, x2, T2, disregard_trivial_ints=True):
         
 
 
-
+def process_trajectory_file(fname):
+  """Process a file which has two trajectories g* (i.e. 1*) and f* (i.e. 0*)
+  on each line, into guesses for theta, lambda.  The output is a 
+  file fname.params, which has theta, lambda, epsilon, where 0<=theta<=2pi
+  and epsilon gives the distance from the given point to all the found 
+  points of intersection.  Nothing rigorous"""
+  f = open(fname, 'r')
+  lines_out = []
+  for line in f:
+    print "Doing: ", line
+    T1, T2 = map(list, line.replace('0','f').replace('1','g').split(' '))
+    tfi1, tfi2, IP = find_feasible_regions(_sage_const_1 , T1, _sage_const_1 , T2)
+    if len(IP) == _sage_const_0 :
+      print "Couldn't find params?"
+      continue
+    t,ell = _sage_const_0 ,_sage_const_0 
+    for ip in IP:
+      t += ip[_sage_const_0 ]
+      ell += ip[_sage_const_1 ]
+    t /= len(IP)
+    ell /= len(IP)
+    epsilon = _sage_const_0 
+    for ip in IP:
+      epsilon = max(epsilon, sqrt((t-ip[_sage_const_0 ])**_sage_const_2  + (ell-ip[_sage_const_1 ])**_sage_const_2 ))
+    lines_out.append( (n(t*pi), ell, epsilon) )
+    print "Got ", (n(t*pi), ell, epsilon)
+  f.close()
+  
+  f = open(fname+'.params', 'w')
+  for line in lines_out:
+    f.write(' '.join(map(str, line)) + '\n')
+  f.close()
 
 
 

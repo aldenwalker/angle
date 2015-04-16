@@ -164,6 +164,7 @@ struct AngleGui {
   void reset_highlighted_point(double L, double T);
   void draw_highlighted_point();
   void draw_param_point(double L, double T, int col);
+  void draw_param_disk(double L, double T, double r, int col);
   
   double param_theta_l;
   double param_theta_u;
