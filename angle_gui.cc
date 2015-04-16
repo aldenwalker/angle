@@ -962,7 +962,7 @@ void AngleGui::draw_param() {
     std::ifstream f;
     double ell, tee, ep;
     int bcol = get_rgb_color(0,0,0);
-    f.open("points_to_plot.txt");
+    f.open("trajectory_list.txt.params");
     if (f.is_open()) {
       while (0 != (f >> tee) && 0 != (f>>ell) && 0 != (f>>ep)) {
         draw_param_disk(ell, tee, ep, bcol);
@@ -1031,8 +1031,10 @@ void AngleGui::draw_param_disk(double L, double T, double r, int col) {
   Widget& PP = W_param_plot;
   param_LT_to_pixel(L, T, ip, jp);
   XSetForeground(display, PP.gc, col);
+  if (r > 0.05) r = 0.01;
   double rad = r/param_pixel_theta_size;
   if (rad < 2) rad = 2;
+  //std::cout << "Drawing disk of radius " << r << " to " << ip << " " << jp << "\n";
   XFillArc(display, PP.p, PP.gc, ip-rad, jp-rad, 2*rad, 2*rad, 0, 360*64);
   XCopyArea(display, PP.p, main_window, PP.gc, ip-rad, jp-rad, 2*rad, 2*rad, PP.ul.x + ip-rad, PP.ul.y + jp-rad);
 }

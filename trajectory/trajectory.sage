@@ -549,8 +549,9 @@ def process_trajectory_file(fname):
     epsilon = 0
     for ip in IP:
       epsilon = max(epsilon, sqrt((t-ip[0])^2 + (ell-ip[1])^2))
-    lines_out.append( (n(t*pi), ell, epsilon) )
     print "\nGot ", (n(t*pi), ell, epsilon)
+    if epsilon < 0.01:
+      lines_out.append( (n(t*pi), n(ell), n(epsilon)) )
   f.close()
   
   f = open(fname+'.params', 'w')
