@@ -528,27 +528,29 @@ def process_trajectory_file(fname):
   lines_out = []
   seen_lines = set()
   for line in f:
-    print "Doing: ", line
     if line in seen_lines:
       continue
     else:
       seen_lines.add(line)
     T1, T2 = map(list, line.replace('0','f').replace('1','g').split(' '))
+    print "Doing", T1, " ", T2
     tfi1, tfi2, IP = find_feasible_regions(1, T1, 1, T2)
     if len(IP) == 0:
       print "Couldn't find params?"
       continue
     t,ell = 0,0
+    print "Found", len(IP), "regions:"
     for ip in IP:
       t += ip[0]
       ell += ip[1]
+      print ip[0],ip[1],
     t /= len(IP)
     ell /= len(IP)
     epsilon = 0
     for ip in IP:
       epsilon = max(epsilon, sqrt((t-ip[0])^2 + (ell-ip[1])^2))
     lines_out.append( (n(t*pi), ell, epsilon) )
-    print "Got ", (n(t*pi), ell, epsilon)
+    print "\nGot ", (n(t*pi), ell, epsilon)
   f.close()
   
   f = open(fname+'.params', 'w')

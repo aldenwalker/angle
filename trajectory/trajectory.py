@@ -528,24 +528,31 @@ def process_trajectory_file(fname):
   points of intersection.  Nothing rigorous"""
   f = open(fname, 'r')
   lines_out = []
+  seen_lines = set()
   for line in f:
-    print "Doing: ", line
+    if line in seen_lines:
+      continue
+    else:
+      seen_lines.add(line)
     T1, T2 = map(list, line.replace('0','f').replace('1','g').split(' '))
+    print "Doing", T1, " ", T2
     tfi1, tfi2, IP = find_feasible_regions(_sage_const_1 , T1, _sage_const_1 , T2)
     if len(IP) == _sage_const_0 :
       print "Couldn't find params?"
       continue
     t,ell = _sage_const_0 ,_sage_const_0 
+    print "Found", len(IP), "regions:"
     for ip in IP:
       t += ip[_sage_const_0 ]
       ell += ip[_sage_const_1 ]
+      print ip[_sage_const_0 ],ip[_sage_const_1 ],
     t /= len(IP)
     ell /= len(IP)
     epsilon = _sage_const_0 
     for ip in IP:
       epsilon = max(epsilon, sqrt((t-ip[_sage_const_0 ])**_sage_const_2  + (ell-ip[_sage_const_1 ])**_sage_const_2 ))
     lines_out.append( (n(t*pi), ell, epsilon) )
-    print "Got ", (n(t*pi), ell, epsilon)
+    print "\nGot ", (n(t*pi), ell, epsilon)
   f.close()
   
   f = open(fname+'.params', 'w')
