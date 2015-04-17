@@ -905,7 +905,7 @@ void AngleGui::draw_param() {
       double lambda, theta;
       param_pixel_group_to_LT(i, j, lambda, theta);
       if (lambda < 1 || 2 < lambda || theta < 0 || 2*PI < theta) {
-        param_grid[i][j].x = param_grid[i][j].y = param_grid[i][j].z = 0;
+        param_grid[i][j].x = param_grid[i][j].y = param_grid[i][j].z = param_grid[i][j].w = 0;
       } else {
         Lamination L(lambda, theta);
         LamType ellt;
